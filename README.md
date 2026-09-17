@@ -12,22 +12,45 @@ fallback.
 configuration, either in the integration's own interface or through environment
 variables and a gitignored JSON file for the scripts.
 
-## Home Assistant integration
+## Installation
 
-`custom_components/groningen_vulgraad/` is a full integration, set up entirely
-from the user interface.
+### With HACS (recommended)
 
-1. Copy `custom_components/groningen_vulgraad/` into your Home Assistant
-   `config/custom_components/` folder, or add this repo to HACS as a custom
-   repository, then restart.
-2. Go to Settings, then Devices and Services, then Add Integration, and search
-   for "Groningen container vulgraad".
-3. Enter any Groningen postcode and house number. It only unlocks the portal
+[HACS](https://hacs.xyz) is the Home Assistant Community Store. It installs
+this integration for you and tells you when a new version is released, which is
+why it is the preferred route.
+
+1. Install HACS first if you do not have it yet, by following the guide at
+   [hacs.xyz](https://hacs.xyz/docs/use/download/download/).
+2. In Home Assistant, open **HACS** from the sidebar.
+3. Open the menu at the top right, the one with three dots, and choose
+   **Custom repositories**.
+4. Paste `https://github.com/WouterJN/homeassistant-groningen-vulgraad` into the
+   repository field, set **Type** to **Integration**, and select **Add**.
+5. Search HACS for **Groningen container vulgraad**, open it, and select
+   **Download**.
+6. Restart Home Assistant.
+
+Once this integration is listed in the HACS default store, steps 3 and 4 will
+no longer be needed.
+
+### By hand
+
+Copy the folder `custom_components/groningen_vulgraad/` into the
+`custom_components/` folder of your Home Assistant configuration, then restart
+Home Assistant. You will have to repeat this for every update, which is what
+HACS saves you from.
+
+## Setting it up
+
+1. Go to **Settings**, then **Devices and Services**, then **Add Integration**,
+   and search for **Groningen container vulgraad**.
+2. Enter any Groningen postcode and house number. It only unlocks the portal
    and filters nothing, so it need not be your own. A public building is fine.
-4. Pick your containers from a dropdown of the roughly 1650 real containers
+3. Pick your containers from a dropdown of the roughly 1650 real containers
    that have a fill sensor, sorted by distance from your Home Assistant
    location, closest first.
-5. Set the poll interval. The default, and the friendly minimum, is one hour.
+4. Set the poll interval. The default, and the friendly minimum, is one hour.
 
 You get one sensor per container, reported as a percentage with
 `state_class: measurement`, grouped into a device per cluster. Each sensor
