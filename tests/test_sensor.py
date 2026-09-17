@@ -99,3 +99,48 @@ async def test_unload(hass, containers):
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()
     assert entry.entry_id not in hass.data.get(DOMAIN, {})
+
+
+async def test_portal_gets_a_private_cookie_jar(hass, containers):
+    """Regression: the portal must not ride Home Assistant's shared session.
+
+    The portal binds its CSRF token to a session cookie. Home Assistant keeps
+    one cookie jar for the whole instance, so sharing it lets a config flow or
+    a second entry rotate our session and earn an HTTP 401 mid chain.
+    """
+    from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
+    shared = async_get_clientsession(hass)
+    entry = await setup_entry(hass, containers, numbers=("111",))
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+
+    assert coordinator._session is not shared
+    assert coordinator._session.cookie_jar is not shared.cookie_jar
+
+
+async def test_config_flow_fetch_uses_its_own_session(hass):
+    """The same isolation, for the flow that runs before an entry exists."""
+    from unittest.mock import AsyncMock, patch
+
+    from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
+    from custom_components.groningen_vulgraad.config_flow import _async_fetch
+
+    shared = async_get_clientsession(hass)
+    seen = {}
+
+    class FakeClient:
+        def __init__(self, session):
+            seen["session"] = session
+
+        async def async_get_containers(self, postcode, huisnummer):
+            return []
+
+    with patch(
+        "custom_components.groningen_vulgraad.config_flow.BurgerportaalClient",
+        FakeClient,
+    ):
+        await _async_fetch(hass, "1234AB", "5")
+
+    assert seen["session"] is not shared
+    assert seen["session"].closed, "the throwaway session must be closed"

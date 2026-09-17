@@ -8,7 +8,7 @@ from datetime import timedelta
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import (
@@ -48,16 +48,30 @@ class VulgraadCoordinator(DataUpdateCoordinator[dict[str, Container]]):
             update_interval=timedelta(hours=hours),
         )
         self.entry = entry
-        self._client = BurgerportaalClient(async_get_clientsession(hass))
+        # A private cookie jar, not Home Assistant's shared client session.
+        #
+        # The portal is session based: it sets a session cookie and issues a
+        # CSRF token bound to it. Home Assistant keeps ONE shared session, and
+        # therefore one cookie jar, for the whole instance. If anything else
+        # starts a portal chain while ours is in flight, for example the config
+        # flow during a poll or a second config entry, the newer
+        # get_session_data rotates the session underneath us and our next call
+        # comes back HTTP 401. Reproduced against the live portal.
+        #
+        # Created during config entry setup, so Home Assistant detaches it when
+        # the entry is unloaded.
+        self._session = async_create_clientsession(hass)
 
     async def _async_update_data(self) -> dict[str, Container]:
         postcode = self.entry.data[CONF_POSTCODE]
         huisnummer = self.entry.data[CONF_HUISNUMMER]
 
         try:
-            # A fresh client per poll: the Mendix session accumulates object
-            # state and is not meant to be reused across flows.
-            client = BurgerportaalClient(async_get_clientsession(self.hass))
+            # A fresh client per poll, because the client accumulates Mendix
+            # object state that belongs to one walk of the flow. The cookie jar
+            # is deliberately reused: the portal is happy to start a new
+            # session on it, and the coordinator never overlaps its own polls.
+            client = BurgerportaalClient(self._session)
             containers = await client.async_get_containers(postcode, huisnummer)
         except VulgraadProtocolError as err:
             # Almost always a redeploy: the operationIds are compiled into the

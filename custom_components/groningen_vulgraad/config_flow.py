@@ -13,7 +13,10 @@ from homeassistant.config_entries import (
     OptionsFlow,
 )
 from homeassistant.core import callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.aiohttp_client import (
+    async_create_clientsession,
+    async_get_clientsession,
+)
 from homeassistant.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
@@ -137,8 +140,20 @@ def _container_options(
 
 
 async def _async_fetch(hass, postcode: str, huisnummer: str) -> list[Container]:
-    client = BurgerportaalClient(async_get_clientsession(hass))
-    return await client.async_get_containers(postcode, huisnummer)
+    """Walk the portal on a cookie jar of our own.
+
+    Not the shared session: a flow can run while a coordinator is polling, and
+    the two would rotate each other's portal session. See coordinator.py.
+    """
+    session = async_create_clientsession(hass, auto_cleanup=False)
+    try:
+        return await BurgerportaalClient(session).async_get_containers(
+            postcode, huisnummer
+        )
+    finally:
+        # detach, not close: Home Assistant owns the underlying connector and
+        # warns if an integration closes a session it handed out.
+        session.detach()
 
 
 class VulgraadConfigFlow(ConfigFlow, domain=DOMAIN):
