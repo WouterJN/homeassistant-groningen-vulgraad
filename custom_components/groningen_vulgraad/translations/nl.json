@@ -53,7 +53,7 @@
   "issues": {
     "stale_operation_ids": {
       "title": "Portaal Groningen is opnieuw uitgerold",
-      "description": "De interne operation-id's van het portaal zijn gewijzigd, waardoor de vulgraad niet meer uitgelezen kan worden. Draai scrape_vulgraad.py uit de projectmap om de nieuwe id's vast te leggen en werk api.py bij."
+      "description": "De interne operation-id's van het portaal zijn gewijzigd, waardoor de vulgraad niet meer uitgelezen kan worden. Hiervoor is een nieuwe versie van de integratie nodig. Kijk in HACS of er een update is, en open anders een issue op de projectpagina."
     }
   },
   "entity": {

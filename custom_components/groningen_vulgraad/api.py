@@ -24,9 +24,10 @@ _LOGGER = logging.getLogger(__name__)
 XAS_URL = "https://21burgerportaal.mendixcloud.com/xas/"
 
 # Opaque capability handles compiled into the Mendix app. They identify a call
-# site, not a microflow, and are regenerated whenever the app is redeployed --
-# the one real fragility here. When they go stale every call returns HTTP 560;
-# re-capture them with scrape_vulgraad.py, which survives a redeploy.
+# site, not a microflow, and are regenerated whenever the app is redeployed:
+# the one real fragility here. When they go stale, calls fail and the
+# integration raises a repair notice. Recapturing them means replaying the
+# portal in a browser and reading the operationId of each request it makes.
 DEFAULT_OPS: dict[str, str] = {
     "seed":      "L2DRgbFgjVO3lpm5EHqv4A",  # mints link + helper + sessionData
     "address":   "4pSmQ7SgUlCQ8BbbusQIRg",  # submit postcode + house number

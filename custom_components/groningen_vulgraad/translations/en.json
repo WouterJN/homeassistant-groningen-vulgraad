@@ -53,7 +53,7 @@
   "issues": {
     "stale_operation_ids": {
       "title": "Groningen portal has been redeployed",
-      "description": "The portal's internal operation identifiers changed, so the fill levels can no longer be read. Run scrape_vulgraad.py from the project folder to capture the new identifiers and update api.py."
+      "description": "The portal's internal operation identifiers changed, so fill levels can no longer be read. This needs a new version of the integration. Check HACS for an update, and if there is none, please open an issue on the project page."
     }
   },
   "entity": {

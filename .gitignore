@@ -1,8 +1,12 @@
+# local only: the command line scrapers and the reverse engineering notes
+scrape_vulgraad.py
+vulgraad_http.py
+vulgraad_common.py
+vulgraad.config.example.json
+groningen-container-vulgraad_1.md
+
 # real configuration: contains an address and a container number
 vulgraad.config.json
-
-# reverse engineering notes: local only
-groningen-container-vulgraad_1.md
 
 .venv/
 __pycache__/
