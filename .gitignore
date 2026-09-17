@@ -1,6 +1,9 @@
 # real configuration: contains an address and a container number
 vulgraad.config.json
 
+# reverse engineering notes: local only
+groningen-container-vulgraad_1.md
+
 .venv/
 __pycache__/
 .pytest_cache/

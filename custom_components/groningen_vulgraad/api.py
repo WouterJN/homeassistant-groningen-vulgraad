@@ -4,10 +4,9 @@ Deliberately free of Home Assistant imports: it takes an aiohttp session and
 returns plain dataclasses, so it can be exercised from a plain script.
 
 The portal is a Mendix 10 single-page app with no REST API. Everything moves
-over POST /xas/, and generic client actions are locked down -- only the
+over POST /xas/, and generic client actions are locked down: only the
 operations the app's own pages invoke will run. So this walks the same chain
-the real client walks, in eight requests. See the notes in
-groningen-container-vulgraad_1.md for how it was derived.
+the real client walks, in eight requests.
 """
 
 from __future__ import annotations

@@ -6,8 +6,7 @@ Home Assistant.
 The municipality publishes fill levels only inside a Mendix portal that has no
 API. This repo works out what that portal does and exposes it three ways: a
 Home Assistant integration, a fast command line scraper, and a browser driven
-fallback. The reverse engineering write up is in
-[`groningen-container-vulgraad_1.md`](groningen-container-vulgraad_1.md).
+fallback.
 
 **No address or container number is stored in this repo.** Both are
 configuration, either in the integration's own interface or through environment
