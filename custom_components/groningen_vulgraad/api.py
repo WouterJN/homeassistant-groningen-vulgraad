@@ -68,7 +68,9 @@ class Container:
     cluster_id: str | None
     cluster_name: str | None
     vulgraad: int | None
-    has_sensor: bool
+    # True / False from the portal; None when the source does not know, as with
+    # the open data WFS, which carries no sensor flag at all.
+    has_sensor: bool | None
     fraction: str | None
     warn: int | None
     alarm: int | None

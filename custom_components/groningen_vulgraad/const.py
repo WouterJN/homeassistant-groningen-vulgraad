@@ -20,13 +20,18 @@ MAX_SCAN_INTERVAL_HOURS: Final = 24
 POSTCODE_RE: Final = re.compile(r"^[1-9][0-9]{3}\s?[A-Za-z]{2}$")
 HUISNUMMER_RE: Final = re.compile(r"^[0-9]+$")
 
-# FractieKleur -> what the container is actually for.
+# What a container is for. The portal reports a colour in FractieKleur, the
+# open data WFS reports a word in FRACTIE, so both vocabularies are mapped.
 FRACTION_NAMES: Final[dict[str, str]] = {
     "GREY": "Restafval",
     "GREEN": "Glas",
     "BLUE": "Papier",
     "ORANGE": "Plastic",
     "YELLOW": "Textiel",
+    "RESTAFVAL": "Restafval",
+    "GLAS": "Glas",
+    "PAPIER": "Papier",
+    "TEXTIEL": "Textiel",
 }
 
 ATTR_CLUSTER_ID: Final = "cluster_id"

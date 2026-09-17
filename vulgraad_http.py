@@ -11,6 +11,8 @@ Same configuration and output as scrape_vulgraad.py; see vulgraad_common.py.
     ./vulgraad_http.py --container 491    # by container number alone
     ./vulgraad_http.py --cluster 1063     # whole cluster, as a JSON array
     ./vulgraad_http.py --list             # every container in Groningen
+    ./vulgraad_http.py --catalogue        # container list from open data,
+                                          # no address and no portal traffic
 
 Exit codes: 0 ok, 1 no match / no sensor, 2 configuration or protocol failure.
 
@@ -227,6 +229,17 @@ def main():
     common.add_arguments(ap)
     args, cfg = common.setup(ap)
     verbose = not args.quiet
+
+    if args.catalogue:
+        # Open data path: no portal traffic, no address, no fill levels.
+        try:
+            rows = common.catalogue_rows()
+        except (OSError, requests.RequestException) as e:
+            print(f"could not reach the open data service: {e}", file=sys.stderr)
+            return 2
+        if verbose:
+            print(f"  {len(rows)} containers from open data", file=sys.stderr)
+        return common.emit(rows, args, cfg, verbose)
 
     try:
         locations = fetch_locations(cfg["postcode"], cfg["huisnummer"], verbose)

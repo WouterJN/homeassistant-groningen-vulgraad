@@ -24,6 +24,8 @@ import os
 import pathlib
 import re
 import sys
+import urllib.parse
+import urllib.request
 
 ENV_PREFIX = "VULGRAAD_"
 FIELDS = ("postcode", "huisnummer", "cluster", "container")
@@ -100,6 +102,9 @@ def add_arguments(ap):
                     help="whole cluster, ignoring the configured container")
     ap.add_argument("--list", action="store_true",
                     help="every container in the municipality")
+    ap.add_argument("--catalogue", action="store_true",
+                    help="list containers from the municipality's open data "
+                         "instead of the portal: no address needed, no fill levels")
     ap.add_argument("--sensors-only", action="store_true",
                     help="keep only containers that have a fill sensor")
     ap.add_argument("--postcode", metavar="1234AB",
@@ -108,6 +113,71 @@ def add_arguments(ap):
                     help="house number, digits only (default: from config)")
     ap.add_argument("--config", metavar="PATH", help="path to a JSON config file")
     ap.add_argument("--quiet", action="store_true", help="no progress on stderr")
+
+
+WFS_URL = "https://maps.groningen.nl/geoserver/geo-data/wfs"
+WFS_PARAMS = {
+    "service": "wfs",
+    "version": "2.0.0",
+    "request": "GetFeature",
+    "typeNames": "geo-data:CONTAINERS",
+    "outputFormat": "application/json",
+}
+
+
+def catalogue_rows(timeout=60):
+    """Container locations from the municipality's own open data service.
+
+    Anonymous, no address, and no load on the burgerportaal. It carries no fill
+    level and no sensor flag, and it is slightly staler than the portal, so it
+    is for discovering container numbers, not for reading values.
+    """
+    try:
+        # requests ships a CA bundle; urllib relies on the system store, which
+        # a python.org build on macOS does not have.
+        import requests
+
+        response = requests.get(WFS_URL, params=WFS_PARAMS, timeout=timeout)
+        response.raise_for_status()
+        payload = response.json()
+    except ImportError:
+        url = f"{WFS_URL}?{urllib.parse.urlencode(WFS_PARAMS)}"
+        with urllib.request.urlopen(url, timeout=timeout) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+
+    rows, seen = [], set()
+    for feature in payload.get("features", []):
+        p = feature.get("properties") or {}
+        number = str(p.get("CONTAINERCODE") or "").strip()
+        if not number or number in seen:
+            continue
+        seen.add(number)
+        rows.append({
+            "cluster_id": _str_or_none(p.get("CLUSTERCODE")),
+            "cluster_name": _str_or_none(p.get("CLUSTEROMSCHRIJVING")),
+            "container": number,
+            "vulgraad": None,
+            "has_sensor": None,      # unknown: the WFS has no sensor flag
+            "fraction": _str_or_none(p.get("FRACTIE")),
+            "warn": None,
+            "alarm": None,
+            "lat": _float_or_none(p.get("LATITUDE")),
+            "lon": _float_or_none(p.get("LONGITUDE")),
+            "guid": None,
+            "source": "opendata-wfs",
+        })
+    return rows
+
+
+def _str_or_none(value):
+    return None if value in (None, "") else str(value)
+
+
+def _float_or_none(value):
+    try:
+        return None if value in (None, "") else float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def resolve(args):
@@ -125,6 +195,11 @@ def resolve(args):
         env = os.environ.get(ENV_PREFIX + name.upper())
         value = cli if cli is not None else (env or file_cfg.get(name))
         out[name] = str(value).strip() if value not in (None, "") else None
+
+    # The catalogue comes from open data, which needs no address at all.
+    if getattr(args, "catalogue", False):
+        out["_source"] = str(source) if source else None
+        return out
 
     if not (out["postcode"] and out["huisnummer"]):
         raise ConfigError(HELP)
@@ -192,6 +267,8 @@ def emit(rows, args, cfg, verbose=True):
                 if (not cluster or r["cluster_id"] == cluster)
                 and (not container or r["container"] == container)]
     if args.sensors_only:
+        # None means "unknown", as in the open data catalogue, so it is excluded
+        # here along with a known-false flag.
         rows = [r for r in rows if r["has_sensor"]]
     rows = dedupe(rows)
 

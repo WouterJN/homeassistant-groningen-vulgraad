@@ -66,6 +66,15 @@ One fetch serves every container you configure. The portal's retrieval returns
 the whole municipality or nothing, so watching ten containers costs what
 watching one costs.
 
+### Where the data comes from
+
+Fill levels exist only inside the portal. The municipality does publish an open
+data service for container locations, clusters and fractions, and this project
+uses it to keep the container picker readable when the portal cannot be
+reached, and for `--catalogue` on the command line. It carries no fill level
+and no sensor flag, and it is slightly staler than the portal, so it never
+replaces it.
+
 ### When the portal is redeployed
 
 The integration calls the portal using operation identifiers compiled into the
@@ -78,10 +87,15 @@ redeploy.
 
 ```bash
 pip install requests
+./vulgraad_http.py --catalogue                # container list from open data
 export VULGRAAD_POSTCODE=1234AB VULGRAAD_HUISNUMMER=1
-./vulgraad_http.py --list --sensors-only      # find a container number
 ./vulgraad_http.py --container 567            # one container, as JSON
 ```
+
+`--catalogue` reads the municipality's own open data service at
+`maps.groningen.nl/geoserver`, which needs no address and puts no load on the
+portal. It is the polite way to look up a container number. It publishes
+locations only, so fill levels still come from the portal.
 
 `vulgraad_http.py` replays the portal's `/xas/` protocol. It needs only
 `requests`, finishes in about 2 seconds, and stops working when the app is

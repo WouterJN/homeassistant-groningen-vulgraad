@@ -35,6 +35,7 @@ from .api import (
     VulgraadConnectionError,
     VulgraadProtocolError,
 )
+from .wfs import async_get_catalogue
 from .const import (
     CONF_CONTAINERS,
     CONF_HUISNUMMER,
@@ -88,16 +89,25 @@ def _validate_address(user_input: dict[str, Any]) -> dict[str, str]:
 
 
 def _container_options(
-    containers: list[Container], home: tuple[float | None, float | None]
+    containers: list[Container],
+    home: tuple[float | None, float | None],
+    require_sensor: bool = True,
 ) -> list[SelectOptionDict]:
-    """Sensored containers, nearest to home first.
+    """Containers, nearest to home first.
 
     The portal hands back the whole municipality, so the picker can show real
     containers instead of asking the user to know a number. Sorting by distance
     from the Home Assistant location puts theirs at the top.
+
+    `require_sensor` is relaxed only for the open data fallback, whose records
+    carry no sensor flag: there, has_sensor is None rather than False.
     """
     home_lat, home_lon = home
-    usable = [c for c in containers if c.has_sensor and c.number]
+    usable = [
+        c
+        for c in containers
+        if c.number and (c.has_sensor or (not require_sensor and c.has_sensor is None))
+    ]
 
     def sort_key(container: Container) -> tuple[float, str]:
         if (
@@ -256,19 +266,27 @@ class VulgraadOptionsFlow(OptionsFlow):
             )
 
         current = self._entry.options.get(CONF_CONTAINERS, [])
+        home = (self.hass.config.latitude, self.hass.config.longitude)
         try:
             containers = await _async_fetch(
                 self.hass,
                 self._entry.data[CONF_POSTCODE],
                 self._entry.data[CONF_HUISNUMMER],
             )
-            options = _container_options(
-                containers,
-                (self.hass.config.latitude, self.hass.config.longitude),
-            )
-        except Exception:  # noqa: BLE001 - fall back to what is configured
-            _LOGGER.debug("could not refresh the container list", exc_info=True)
-            options = [SelectOptionDict(value=n, label=n) for n in current]
+            options = _container_options(containers, home)
+        except Exception:  # noqa: BLE001 - the portal is optional here
+            _LOGGER.debug("could not refresh from the portal", exc_info=True)
+            try:
+                # The municipality publishes container locations as open data,
+                # with no address and no sensor flag. Good enough to keep the
+                # picker readable while the portal is down or redeployed.
+                catalogue = await async_get_catalogue(
+                    async_get_clientsession(self.hass)
+                )
+                options = _container_options(catalogue, home, require_sensor=False)
+            except Exception:  # noqa: BLE001 - last resort: bare numbers
+                _LOGGER.debug("could not reach the open data WFS", exc_info=True)
+                options = [SelectOptionDict(value=n, label=n) for n in current]
 
         schema = vol.Schema(
             {

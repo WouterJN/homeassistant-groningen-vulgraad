@@ -15,6 +15,7 @@ def auto_enable_custom_integrations(enable_custom_integrations):
 
 def make_container(number, vulgraad=51, has_sensor=True, cluster="1234",
                    fraction="GREY", lat=53.2, lon=6.5):
+    """has_sensor None means unknown, as the open data WFS reports it."""
     return Container(
         number=number,
         cluster_id=cluster,
