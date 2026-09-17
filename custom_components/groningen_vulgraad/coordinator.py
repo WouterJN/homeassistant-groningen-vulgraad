@@ -1,0 +1,86 @@
+"""Polling coordinator: one fetch feeds every configured container."""
+
+from __future__ import annotations
+
+import logging
+from datetime import timedelta
+
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers import issue_registry as ir
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+
+from .api import (
+    BurgerportaalClient,
+    Container,
+    VulgraadAddressRejected,
+    VulgraadConnectionError,
+    VulgraadProtocolError,
+)
+from .const import (
+    CONF_HUISNUMMER,
+    CONF_POSTCODE,
+    CONF_SCAN_INTERVAL_HOURS,
+    DEFAULT_SCAN_INTERVAL_HOURS,
+    DOMAIN,
+    ISSUE_STALE_OPS,
+)
+
+_LOGGER = logging.getLogger(__name__)
+
+
+class VulgraadCoordinator(DataUpdateCoordinator[dict[str, Container]]):
+    """Fetch the whole municipality once per interval, keyed by container number.
+
+    The retrieval is all-or-nothing -- there is no way to ask for one
+    container -- so watching ten costs exactly what watching one costs.
+    """
+
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
+        hours = entry.options.get(
+            CONF_SCAN_INTERVAL_HOURS, DEFAULT_SCAN_INTERVAL_HOURS
+        )
+        super().__init__(
+            hass,
+            _LOGGER,
+            name=DOMAIN,
+            update_interval=timedelta(hours=hours),
+        )
+        self.entry = entry
+        self._client = BurgerportaalClient(async_get_clientsession(hass))
+
+    async def _async_update_data(self) -> dict[str, Container]:
+        postcode = self.entry.data[CONF_POSTCODE]
+        huisnummer = self.entry.data[CONF_HUISNUMMER]
+
+        try:
+            # A fresh client per poll: the Mendix session accumulates object
+            # state and is not meant to be reused across flows.
+            client = BurgerportaalClient(async_get_clientsession(self.hass))
+            containers = await client.async_get_containers(postcode, huisnummer)
+        except VulgraadProtocolError as err:
+            # Almost always a redeploy: the operationIds are compiled into the
+            # app and are regenerated. Tell the user how to recover.
+            self._async_raise_stale_issue()
+            raise UpdateFailed(f"portal protocol changed: {err}") from err
+        except VulgraadAddressRejected as err:
+            raise UpdateFailed(f"address rejected by the portal: {err}") from err
+        except VulgraadConnectionError as err:
+            raise UpdateFailed(f"cannot reach the portal: {err}") from err
+
+        self._async_clear_stale_issue()
+        return {c.number: c for c in containers if c.number}
+
+    def _async_raise_stale_issue(self) -> None:
+        ir.async_create_issue(
+            self.hass,
+            DOMAIN,
+            ISSUE_STALE_OPS,
+            is_fixable=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key=ISSUE_STALE_OPS,
+        )
+
+    def _async_clear_stale_issue(self) -> None:
+        ir.async_delete_issue(self.hass, DOMAIN, ISSUE_STALE_OPS)

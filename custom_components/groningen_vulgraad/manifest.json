@@ -1,0 +1,14 @@
+{
+  "domain": "groningen_vulgraad",
+  "name": "Groningen container vulgraad",
+  "codeowners": [
+    "@WouterJN"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/WouterJN/homeassistant-groningen-vulgraad",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/WouterJN/homeassistant-groningen-vulgraad/issues",
+  "requirements": [],
+  "version": "1.0.0"
+}

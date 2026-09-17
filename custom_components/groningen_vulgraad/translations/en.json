@@ -1,0 +1,66 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Groningen container fill level",
+        "description": "Enter any address in the municipality of Groningen. It only unlocks the portal — it does not filter anything, so it need not be your own.",
+        "data": {
+          "postcode": "Postcode",
+          "huisnummer": "House number"
+        },
+        "data_description": {
+          "postcode": "For example 1234AB",
+          "huisnummer": "Digits only, no letters or additions"
+        }
+      },
+      "containers": {
+        "title": "Choose containers",
+        "description": "{count} containers with a fill sensor were found, nearest to home first. Pick the ones you want to follow.",
+        "data": {
+          "containers": "Containers",
+          "scan_interval_hours": "Update interval"
+        },
+        "data_description": {
+          "containers": "One sensor is created per container",
+          "scan_interval_hours": "Hours between polls. The portal rebuilds a large payload each time, so hourly is the friendly minimum."
+        }
+      }
+    },
+    "error": {
+      "invalid_postcode": "That does not look like a Dutch postcode (1234AB).",
+      "invalid_huisnummer": "The house number must be digits only.",
+      "address_rejected": "The portal says this address is outside the municipality.",
+      "cannot_connect": "Could not reach the portal.",
+      "protocol_changed": "The portal has changed and the integration can no longer read it. See the repair notice.",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "This address is already set up.",
+      "no_containers": "No containers with a fill sensor were found for this address."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Containers and update interval",
+        "data": {
+          "containers": "Containers",
+          "scan_interval_hours": "Update interval"
+        }
+      }
+    }
+  },
+  "issues": {
+    "stale_operation_ids": {
+      "title": "Groningen portal has been redeployed",
+      "description": "The portal's internal operation identifiers changed, so the fill levels can no longer be read. Run scrape_vulgraad.py from the project folder to capture the new identifiers and update api.py."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "vulgraad": {
+        "name": "Fill level"
+      }
+    }
+  }
+}

@@ -1,0 +1,7 @@
+# real configuration: contains an address and a container number
+vulgraad.config.json
+
+.venv/
+__pycache__/
+.pytest_cache/
+.xas_bulk_ops.json

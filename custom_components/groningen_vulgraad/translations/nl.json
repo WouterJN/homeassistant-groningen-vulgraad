@@ -1,0 +1,66 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Vulgraad container Groningen",
+        "description": "Vul een willekeurig adres in de gemeente Groningen in. Het adres geeft alleen toegang tot het portaal en filtert niets, dus het hoeft niet je eigen adres te zijn.",
+        "data": {
+          "postcode": "Postcode",
+          "huisnummer": "Huisnummer"
+        },
+        "data_description": {
+          "postcode": "Bijvoorbeeld 1234AB",
+          "huisnummer": "Alleen cijfers, zonder toevoeging"
+        }
+      },
+      "containers": {
+        "title": "Containers kiezen",
+        "description": "Er zijn {count} containers met een vulgraadsensor gevonden, dichtstbijzijnde eerst. Kies welke je wilt volgen.",
+        "data": {
+          "containers": "Containers",
+          "scan_interval_hours": "Vernieuwingsinterval"
+        },
+        "data_description": {
+          "containers": "Per container wordt één sensor aangemaakt",
+          "scan_interval_hours": "Aantal uren tussen metingen. Het portaal bouwt elke keer een grote payload op, dus elk uur is het vriendelijke minimum."
+        }
+      }
+    },
+    "error": {
+      "invalid_postcode": "Dit lijkt geen Nederlandse postcode (1234AB).",
+      "invalid_huisnummer": "Het huisnummer mag alleen cijfers bevatten.",
+      "address_rejected": "Het portaal meldt dat dit adres buiten de gemeente valt.",
+      "cannot_connect": "Kan het portaal niet bereiken.",
+      "protocol_changed": "Het portaal is gewijzigd en kan niet meer worden uitgelezen. Zie de reparatiemelding.",
+      "unknown": "Onverwachte fout."
+    },
+    "abort": {
+      "already_configured": "Dit adres is al ingesteld.",
+      "no_containers": "Geen containers met een vulgraadsensor gevonden voor dit adres."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Containers en interval",
+        "data": {
+          "containers": "Containers",
+          "scan_interval_hours": "Vernieuwingsinterval"
+        }
+      }
+    }
+  },
+  "issues": {
+    "stale_operation_ids": {
+      "title": "Portaal Groningen is opnieuw uitgerold",
+      "description": "De interne operation-id's van het portaal zijn gewijzigd, waardoor de vulgraad niet meer uitgelezen kan worden. Draai scrape_vulgraad.py uit de projectmap om de nieuwe id's vast te leggen en werk api.py bij."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "vulgraad": {
+        "name": "Vulgraad"
+      }
+    }
+  }
+}

@@ -1,0 +1,4 @@
+requests
+aiohttp
+playwright
+pytest-homeassistant-custom-component
