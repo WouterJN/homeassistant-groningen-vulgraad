@@ -53,7 +53,7 @@
   "issues": {
     "stale_operation_ids": {
       "title": "Portaal Groningen is opnieuw uitgerold",
-      "description": "De interne operation-id's van het portaal zijn gewijzigd, waardoor de vulgraad niet meer uitgelezen kan worden. Hiervoor is een nieuwe versie van de integratie nodig. Kijk in HACS of er een update is, en open anders een issue op de projectpagina."
+      "description": "Het portaal is zo gewijzigd dat de integratie niet mee kon. Normaal herstelt de integratie zichzelf na een verbouwing van het portaal, door de paginadefinities van het portaal zelf te lezen, maar dat lukte deze keer niet. Kijk in HACS of er een update is, en open anders een issue op de projectpagina."
     }
   },
   "entity": {

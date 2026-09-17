@@ -77,13 +77,24 @@ it to keep the container picker readable when the portal cannot be reached. It
 carries no fill level and no sensor flag, and it is slightly staler than the
 portal, so it never replaces it.
 
-## When the portal is redeployed
+## When the portal is rebuilt
 
-The integration calls the portal using operation identifiers that are compiled
-into the portal software. A redeploy regenerates them and polling then fails,
-and the integration raises a repair notice in Home Assistant. That needs a new
-version of the integration, so check HACS for an update and otherwise open an
-issue here.
+Every call to the portal has to name an internal identifier that is generated
+when the portal software is built. A rebuild changes all of them, which used to
+break this integration until a new version shipped.
+
+It now repairs itself. The portal serves its own page definitions over plain
+anonymous requests, and each definition names the operation behind every widget
+next to a description of what that operation does. So when the stored
+identifiers stop working, the integration reads the new ones straight from the
+portal and carries on, then remembers them. Which pages to read is not guessed
+either: the portal names the next page at every step of the flow.
+
+That takes one extra poll and about a second. Nothing hardcoded is left except
+the names of things in the portal's data model, which outlive any rebuild.
+
+The repair notice in Home Assistant now only appears if that recovery also
+fails, which would mean the portal changed more deeply than a rebuild.
 
 ## Development
 

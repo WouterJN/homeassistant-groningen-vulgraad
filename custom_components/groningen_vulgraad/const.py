@@ -43,4 +43,10 @@ ATTR_ALARM: Final = "alarm_threshold"
 ATTR_STATUS: Final = "status"
 
 # Raised as a repair issue when the operationIds go stale after a redeploy.
+# Last known good operation identifiers, remembered on the config entry so a
+# redeploy costs one rediscovery rather than one per restart.
+CONF_OPERATION_IDS: Final = "operation_ids"
+
+# Raised only when even rediscovery fails, which means the portal changed in a
+# way this integration cannot follow.
 ISSUE_STALE_OPS: Final = "stale_operation_ids"

@@ -20,6 +20,7 @@ from .api import (
 )
 from .const import (
     CONF_HUISNUMMER,
+    CONF_OPERATION_IDS,
     CONF_POSTCODE,
     CONF_SCAN_INTERVAL_HOURS,
     DEFAULT_SCAN_INTERVAL_HOURS,
@@ -61,6 +62,9 @@ class VulgraadCoordinator(DataUpdateCoordinator[dict[str, Container]]):
         # Created during config entry setup, so Home Assistant detaches it when
         # the entry is unloaded.
         self._session = async_create_clientsession(hass)
+        # Whatever worked last time. Empty on a fresh install, in which case the
+        # client starts from the identifiers it ships with.
+        self._ops: dict[str, str] = dict(entry.data.get(CONF_OPERATION_IDS) or {})
 
     async def _async_update_data(self) -> dict[str, Container]:
         postcode = self.entry.data[CONF_POSTCODE]
@@ -71,11 +75,14 @@ class VulgraadCoordinator(DataUpdateCoordinator[dict[str, Container]]):
             # object state that belongs to one walk of the flow. The cookie jar
             # is deliberately reused: the portal is happy to start a new
             # session on it, and the coordinator never overlaps its own polls.
-            client = BurgerportaalClient(self._session)
+            client = BurgerportaalClient(self._session, ops=self._ops or None)
             containers = await client.async_get_containers(postcode, huisnummer)
+            if client.rediscovered:
+                self._async_remember(client.operation_ids)
         except VulgraadProtocolError as err:
-            # Almost always a redeploy: the operationIds are compiled into the
-            # app and are regenerated. Tell the user how to recover.
+            # The client already tried to rediscover the identifiers from the
+            # portal's own page definitions, so reaching here means the portal
+            # changed in a way this integration cannot follow on its own.
             self._async_raise_stale_issue()
             raise UpdateFailed(f"portal protocol changed: {err}") from err
         except VulgraadAddressRejected as err:
@@ -85,6 +92,17 @@ class VulgraadCoordinator(DataUpdateCoordinator[dict[str, Container]]):
 
         self._async_clear_stale_issue()
         return {c.number: c for c in containers if c.number}
+
+    def _async_remember(self, ops: dict[str, str]) -> None:
+        """Store rediscovered identifiers on the config entry."""
+        if ops == self._ops:
+            return
+        self._ops = dict(ops)
+        _LOGGER.info("storing rediscovered portal operation ids")
+        self.hass.config_entries.async_update_entry(
+            self.entry,
+            data={**self.entry.data, CONF_OPERATION_IDS: self._ops},
+        )
 
     def _async_raise_stale_issue(self) -> None:
         ir.async_create_issue(
