@@ -90,8 +90,10 @@ identifiers stop working, the integration reads the new ones straight from the
 portal and carries on, then remembers them. Which pages to read is not guessed
 either: the portal names the next page at every step of the flow.
 
-That takes one extra poll and about a second. Nothing hardcoded is left except
-the names of things in the portal's data model, which outlive any rebuild.
+Recovery happens inside the poll that hit the problem, not on the next one, so
+no reading is skipped and your sensors do not go unavailable. That poll takes
+roughly a second longer than usual. Nothing hardcoded is left except the names
+of things in the portal's data model, which outlive any rebuild.
 
 The repair notice in Home Assistant now only appears if that recovery also
 fails, which would mean the portal changed more deeply than a rebuild.
