@@ -1,7 +1,11 @@
+<img src="assets/icon.png" alt="" width="96" align="left">
+
 # Groningen container vulgraad
 
 A Home Assistant integration that shows how full an underground waste container
 in Groningen is.
+
+<br clear="left">
 
 The municipality publishes container fill levels only inside a web portal that
 has no public API for them. This integration reads that portal for you and
@@ -110,6 +114,17 @@ of things in the portal's data model, which outlive any rebuild.
 The repair notice in Home Assistant now only appears if that recovery also
 fails, which would mean the portal changed more deeply than a rebuild.
 
+## Icon
+
+The artwork lives in `assets/`. `logo.svg` is the source, and
+`python assets/render_logo.py` regenerates the PNG sizes from the same shapes,
+so no drawing program is needed.
+
+Home Assistant does not read icons from an integration's own folder. To make
+this one appear on the integration card, the PNG files have to be contributed
+to the Home Assistant brands repository, under
+`custom_integrations/groningen_vulgraad/`.
+
 ## Development
 
 ```bash
@@ -119,3 +134,7 @@ python -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 
 `custom_components/groningen_vulgraad/api.py` imports nothing from Home
 Assistant, so you can exercise it on its own.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
