@@ -1,33 +1,29 @@
 """Rasterise the integration icon.
 
-The subject is the real thing: a Groningen underground container as it looks
-from the street. A dark charcoal housing with a slanted top, a hinged door on
-the front, the stainless deposit drum beside it, and the diamond tread plate it
-stands on. The bin itself is below ground and never visible, so the fill level
-is shown as a gauge window in the door.
+One Groningen underground container, drawn from the photographs on
+milieudienst.groningen.nl: a glossy black housing with a domed top, standing on
+its tread plate, with the big light hatch panel across the front.
+
+The bin is below ground and never visible, so the hatch panel doubles as the
+gauge: it fills from the bottom with the level the integration reports.
 
 The shapes are simple enough to draw with Pillow, so regenerating the artwork
 needs no SVG engine. Everything is drawn at 4x and downsampled, which is what
-gives the edges their smoothness.
+gives the curves their smoothness.
 
     python assets/render_logo.py
 """
 
 from PIL import Image, ImageDraw
 
-BACKGROUND = (31, 111, 67)
-HOUSING = (43, 47, 52)
-HOUSING_EDGE = (62, 68, 75)
-WINDOW = (22, 25, 28)
-DRUM = (176, 184, 189)
-DRUM_LIGHT = (205, 212, 216)
-PLATE_EDGE = (163, 171, 176)
-PLATE = (138, 147, 153)
-LEVEL = (124, 214, 157)
-LABEL = (214, 74, 74)
+BACKGROUND = (28, 102, 62)
+BODY = (18, 20, 23)
+PANEL_EMPTY = (226, 228, 222)
+PANEL_FULL = (79, 180, 119)
+PLATE = (146, 155, 161)
 
 CANVAS = 2048          # drawn large, saved small
-FILL = 0.62            # how full the gauge window reads
+FILL = 0.62            # how full the hatch panel reads
 
 
 def u(value: float) -> float:
@@ -40,45 +36,26 @@ def render() -> Image.Image:
     draw = ImageDraw.Draw(image)
     draw.rounded_rectangle([0, 0, CANVAS, CANVAS], radius=u(104), fill=BACKGROUND)
 
-    # the tread plate the housing stands on, wider than the housing itself
+    # the tread plate the housing stands on
     draw.rounded_rectangle(
-        [u(48), u(404), u(464), u(446)], radius=u(12), fill=PLATE
-    )
-    draw.rounded_rectangle(
-        [u(48), u(404), u(464), u(418)], radius=u(7), fill=PLATE_EDGE
+        [u(88), u(414), u(424), u(450)], radius=u(11), fill=PLATE
     )
 
-    # housing. The real roof slopes only slightly, up towards the drum side.
-    draw.polygon(
-        [(u(110), u(170)), (u(402), u(140)), (u(402), u(408)), (u(110), u(408))],
-        fill=HOUSING,
-    )
-    draw.polygon(
-        [(u(110), u(170)), (u(402), u(140)), (u(402), u(156)), (u(110), u(186))],
-        fill=HOUSING_EDGE,
-    )
-
-    # the stainless deposit drum, a cylinder with a domed top
+    # the housing: upright, with the domed top these containers have
+    # squat, with the shallow domed roof these containers have, not an arch
+    body = [u(122), u(156), u(390), u(426)]
     draw.rounded_rectangle(
-        [u(306), u(180), u(388), u(396)], radius=u(41), fill=DRUM
+        body, radius=u(78), corners=(True, True, False, False), fill=BODY
     )
-    draw.ellipse([u(306), u(180), u(388), u(240)], fill=DRUM_LIGHT)
-
-    # gauge window in the door, empty part first
-    window = [u(134), u(222), u(288), u(394)]
-    draw.rounded_rectangle(window, radius=u(12), fill=WINDOW)
-    top = window[1] + (window[3] - window[1]) * (1 - FILL)
+    # the hatch panel across the front, which doubles as the fill gauge
+    panel = [u(156), u(248), u(356), u(402)]
+    draw.rounded_rectangle(panel, radius=u(14), fill=PANEL_EMPTY)
+    surface = panel[1] + (panel[3] - panel[1]) * (1 - FILL)
     draw.rounded_rectangle(
-        [window[0], top, window[2], window[3]], radius=u(12), fill=LEVEL
+        [panel[0], surface, panel[2], panel[3]], radius=u(14), fill=PANEL_FULL
     )
     # square off the top of the level so it reads as a surface, not a pill
-    draw.rectangle([window[0], top, window[2], top + u(14)], fill=LEVEL)
-
-    # the number plate every container carries, upper left of the door
-    draw.rounded_rectangle(
-        [u(134), u(182), u(196), u(212)], radius=u(7), fill=LABEL
-    )
-
+    draw.rectangle([panel[0], surface, panel[2], surface + u(16)], fill=PANEL_FULL)
     return image
 
 

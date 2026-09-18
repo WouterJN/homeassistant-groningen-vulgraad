@@ -116,11 +116,11 @@ fails, which would mean the portal changed more deeply than a rebuild.
 
 ## Icon
 
-The artwork lives in `assets/`. It draws the container as it actually looks on
-the street: the dark housing with its sloping roof, the stainless deposit drum,
-the numbered label, and the tread plate it stands on. The bin itself is below
-ground and never visible, so the fill level is shown as a gauge window in the
-door.
+The artwork lives in `assets/`. It draws one container as it actually looks on
+the street: the glossy black housing with its shallow domed roof, the big light
+hatch panel across the front, and the tread plate it stands on. The bin itself
+is below ground and never visible, so the hatch panel doubles as the gauge and
+fills from the bottom.
 
 `logo.svg` is the source, and `python assets/render_logo.py` regenerates the
 PNG sizes from the same shapes, so no drawing program is needed.
