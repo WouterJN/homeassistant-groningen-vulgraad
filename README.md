@@ -50,6 +50,18 @@ HACS saves you from.
    location, closest first.
 4. Set the poll interval. The default, and the friendly minimum, is one hour.
 
+### Following more containers later
+
+One entry holds as many containers as you like, so do not add the integration a
+second time for the same address. Home Assistant will refuse that, because a
+single poll already returns the whole municipality and a second entry would
+only double the traffic.
+
+Instead go to **Settings**, then **Devices and Services**, find **Groningen
+container vulgraad**, and choose **Configure**. The container list is a
+multiple choice field: add the ones you want and submit. A sensor appears for
+each.
+
 ## What you get
 
 One sensor per container, reported as a percentage with

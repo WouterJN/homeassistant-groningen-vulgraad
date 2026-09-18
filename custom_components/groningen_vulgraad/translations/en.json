@@ -35,7 +35,7 @@
       "unknown": "Unexpected error."
     },
     "abort": {
-      "already_configured": "This address is already set up.",
+      "already_configured": "This address is already set up. You do not need a second entry to follow more containers: open the existing one, choose Configure, and add them in the container list, which lets you select several. One entry polls once for all of them.",
       "no_containers": "No containers with a fill sensor were found for this address."
     }
   },
@@ -46,7 +46,8 @@
         "data": {
           "containers": "Containers",
           "scan_interval_hours": "Update interval"
-        }
+        },
+        "description": "Select every container you want to follow. They are polled together, so following several costs no more than following one."
       }
     }
   },

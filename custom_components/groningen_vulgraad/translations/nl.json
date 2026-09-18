@@ -35,7 +35,7 @@
       "unknown": "Onverwachte fout."
     },
     "abort": {
-      "already_configured": "Dit adres is al ingesteld.",
+      "already_configured": "Dit adres is al ingesteld. Je hebt geen tweede vermelding nodig om meer containers te volgen: open de bestaande, kies Configureren en voeg ze toe in de containerlijst, waarin je er meerdere kunt selecteren. Eén vermelding haalt ze in één keer op.",
       "no_containers": "Geen containers met een vulgraadsensor gevonden voor dit adres."
     }
   },
@@ -46,7 +46,8 @@
         "data": {
           "containers": "Containers",
           "scan_interval_hours": "Vernieuwingsinterval"
-        }
+        },
+        "description": "Selecteer alle containers die je wilt volgen. Ze worden samen opgehaald, dus meerdere volgen kost niet meer dan één."
       }
     }
   },

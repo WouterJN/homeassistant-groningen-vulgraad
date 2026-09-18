@@ -98,3 +98,77 @@ async def test_portal_unreachable(hass):
             result["flow_id"], {CONF_POSTCODE: "1234AB", CONF_HUISNUMMER: "5"}
         )
     assert result["errors"] == {"base": "cannot_connect"}
+
+
+async def test_adding_containers_through_options(hass, containers):
+    """The supported way to follow more than one container.
+
+    A second config entry for the same address is refused, so the options
+    screen is where containers are added. Submitting more of them must produce
+    a sensor for each, on the one entry.
+    """
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    from custom_components.groningen_vulgraad.const import CONF_SCAN_INTERVAL_HOURS
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_POSTCODE: "1234AB", CONF_HUISNUMMER: "5"},
+        options={CONF_CONTAINERS: ["111"], CONF_SCAN_INTERVAL_HOURS: 1},
+        unique_id="1234AB-5",
+    )
+    entry.add_to_hass(hass)
+
+    patch_client = patch(
+        "custom_components.groningen_vulgraad.coordinator."
+        "BurgerportaalClient.async_get_containers",
+        AsyncMock(return_value=containers),
+    )
+    with patch_client:
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    assert len(hass.states.async_all("sensor")) == 1
+
+    with patch(PATCH_FETCH, AsyncMock(return_value=containers)):
+        result = await hass.config_entries.options.async_init(entry.entry_id)
+        assert result["step_id"] == "init"
+        # both sensored containers are on offer; the third has no sensor
+        offered = [
+            o["value"]
+            for o in result["data_schema"].schema[CONF_CONTAINERS].config["options"]
+        ]
+        assert set(offered) == {"111", "222"}
+
+        with patch_client:
+            result = await hass.config_entries.options.async_configure(
+                result["flow_id"],
+                {CONF_CONTAINERS: ["111", "222"], CONF_SCAN_INTERVAL_HOURS: 1},
+            )
+            await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options[CONF_CONTAINERS] == ["111", "222"]
+    assert len(hass.states.async_all("sensor")) == 2, "a sensor per container"
+
+
+async def test_second_entry_for_the_same_address_is_refused(hass):
+    """One entry already polls for every container, so a duplicate is waste."""
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_POSTCODE: "1234AB", CONF_HUISNUMMER: "5"},
+        options={CONF_CONTAINERS: ["111"]},
+        unique_id="1234AB-5",
+    ).add_to_hass(hass)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": "user"}
+    )
+    with patch(PATCH_FETCH, AsyncMock()) as fetch:
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_POSTCODE: "1234 ab", CONF_HUISNUMMER: "5"}
+        )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "already_configured"
+    fetch.assert_not_called(), "no point calling the portal for a duplicate"
