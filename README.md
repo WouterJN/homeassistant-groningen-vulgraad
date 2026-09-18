@@ -116,9 +116,14 @@ fails, which would mean the portal changed more deeply than a rebuild.
 
 ## Icon
 
-The artwork lives in `assets/`. `logo.svg` is the source, and
-`python assets/render_logo.py` regenerates the PNG sizes from the same shapes,
-so no drawing program is needed.
+The artwork lives in `assets/`. It draws the container as it actually looks on
+the street: the dark housing with its sloping roof, the stainless deposit drum,
+the numbered label, and the tread plate it stands on. The bin itself is below
+ground and never visible, so the fill level is shown as a gauge window in the
+door.
+
+`logo.svg` is the source, and `python assets/render_logo.py` regenerates the
+PNG sizes from the same shapes, so no drawing program is needed.
 
 Home Assistant does not read icons from an integration's own folder. To make
 this one appear on the integration card, the PNG files have to be contributed
