@@ -144,3 +144,111 @@ async def test_config_flow_fetch_uses_its_own_session(hass):
 
     assert seen["session"] is not shared
     assert seen["session"].closed, "the throwaway session must be closed"
+
+
+# -- last emptied
+
+EMPTIED = "sensor.1234_teststraat_restafval_111_last_emptied"
+
+
+async def poll(hass, entry, containers):
+    """One more coordinator poll, returning the given payload."""
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    with patch(PATCH_CLIENT, AsyncMock(return_value=containers)):
+        await coordinator.async_refresh()
+        await hass.async_block_till_done()
+
+
+async def test_last_emptied_is_unknown_until_a_drop_is_seen(hass, containers):
+    await setup_entry(hass, containers, numbers=("111",))
+    state = hass.states.get(EMPTIED)
+    assert state.state == "unknown"
+    assert state.attributes["device_class"] == "timestamp"
+    assert state.attributes["last_seen_level"] == 51
+
+
+async def test_a_large_drop_counts_as_emptied(hass, containers, freezer):
+    entry = await setup_entry(hass, containers, numbers=("111",))
+    freezer.move_to("2026-09-29 08:00:00+00:00")
+    await poll(hass, entry, [make_container("111", vulgraad=4)])
+
+    state = hass.states.get(EMPTIED)
+    assert state.state == "2026-09-29T08:00:00+00:00"
+    assert state.attributes["last_seen_level"] == 4
+
+
+async def test_sensor_jitter_is_not_an_emptying(hass, containers):
+    entry = await setup_entry(hass, containers, numbers=("111",))
+    await poll(hass, entry, [make_container("111", vulgraad=46)])
+    assert hass.states.get(EMPTIED).state == "unknown"
+
+
+async def test_a_missing_reading_keeps_the_baseline(hass, containers, freezer):
+    """An emptying across a gap in the data must still be caught."""
+    entry = await setup_entry(hass, containers, numbers=("111",))
+    await poll(hass, entry, [make_container("111", vulgraad=None)])
+    assert hass.states.get(EMPTIED).attributes["last_seen_level"] == 51
+
+    freezer.move_to("2026-09-29 09:00:00+00:00")
+    await poll(hass, entry, [make_container("111", vulgraad=10)])
+    assert hass.states.get(EMPTIED).state == "2026-09-29T09:00:00+00:00"
+
+
+async def test_last_emptied_survives_a_restart(hass):
+    from datetime import datetime, timezone
+
+    from homeassistant.core import State
+    from pytest_homeassistant_custom_component.common import (
+        mock_restore_cache_with_extra_data,
+    )
+
+    emptied = datetime(2026, 9, 20, 7, 0, tzinfo=timezone.utc)
+    mock_restore_cache_with_extra_data(
+        hass,
+        [
+            (
+                State(EMPTIED, emptied.isoformat(), {"last_seen_level": 55}),
+                {
+                    "native_value": {
+                        "__type": "<class 'datetime.datetime'>",
+                        "isoformat": emptied.isoformat(),
+                    },
+                    "native_unit_of_measurement": None,
+                },
+            )
+        ],
+    )
+    await setup_entry(hass, [make_container("111", vulgraad=51)], numbers=("111",))
+    state = hass.states.get(EMPTIED)
+    assert state.state == emptied.isoformat()
+    assert state.attributes["last_seen_level"] == 51
+
+
+async def test_an_emptying_during_downtime_is_caught_on_startup(hass, freezer):
+    from homeassistant.core import State
+    from pytest_homeassistant_custom_component.common import (
+        mock_restore_cache_with_extra_data,
+    )
+
+    mock_restore_cache_with_extra_data(
+        hass,
+        [
+            (
+                State(EMPTIED, "unknown", {"last_seen_level": 90}),
+                {"native_value": None, "native_unit_of_measurement": None},
+            )
+        ],
+    )
+    freezer.move_to("2026-09-29 10:00:00+00:00")
+    await setup_entry(hass, [make_container("111", vulgraad=3)], numbers=("111",))
+    assert hass.states.get(EMPTIED).state == "2026-09-29T10:00:00+00:00"
+
+
+async def test_entity_names_come_from_translations(hass, containers):
+    await setup_entry(hass, containers, numbers=("111",))
+    level = hass.states.get("sensor.1234_teststraat_restafval_111")
+    emptied = hass.states.get(EMPTIED)
+    assert level.attributes["friendly_name"] == "1234 - Teststraat Restafval 111"
+    assert emptied.attributes["friendly_name"] == (
+        "1234 - Teststraat Restafval 111 last emptied"
+    )

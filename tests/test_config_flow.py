@@ -127,7 +127,8 @@ async def test_adding_containers_through_options(hass, containers):
     with patch_client:
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
-    assert len(hass.states.async_all("sensor")) == 1
+    # a fill level and a last emptied sensor per container
+    assert len(hass.states.async_all("sensor")) == 2
 
     with patch(PATCH_FETCH, AsyncMock(return_value=containers)):
         result = await hass.config_entries.options.async_init(entry.entry_id)
@@ -148,7 +149,7 @@ async def test_adding_containers_through_options(hass, containers):
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert entry.options[CONF_CONTAINERS] == ["111", "222"]
-    assert len(hass.states.async_all("sensor")) == 2, "a sensor per container"
+    assert len(hass.states.async_all("sensor")) == 4, "two sensors per container"
 
 
 async def test_second_entry_for_the_same_address_is_refused(hass):

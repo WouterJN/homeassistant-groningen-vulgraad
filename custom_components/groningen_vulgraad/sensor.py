@@ -1,8 +1,12 @@
-"""Fill-level sensors, one per configured container."""
+"""Sensors per configured container: fill level, and when it was last emptied."""
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from homeassistant.components.sensor import (
+    RestoreSensor,
+    SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
@@ -12,6 +16,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 
 from .api import Container
 from .const import (
@@ -20,10 +25,12 @@ from .const import (
     ATTR_CLUSTER_NAME,
     ATTR_CONTAINER,
     ATTR_FRACTION,
+    ATTR_LAST_SEEN_LEVEL,
     ATTR_STATUS,
     ATTR_WARN,
     CONF_CONTAINERS,
     DOMAIN,
+    EMPTIED_MIN_DROP,
     FRACTION_NAMES,
 )
 from .coordinator import VulgraadCoordinator
@@ -34,26 +41,24 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up one sensor per configured container."""
+    """Set up two sensors per configured container."""
     coordinator: VulgraadCoordinator = hass.data[DOMAIN][entry.entry_id]
     numbers: list[str] = entry.options.get(CONF_CONTAINERS, [])
-    async_add_entities(
-        VulgraadSensor(coordinator, number) for number in numbers
-    )
+    entities: list[SensorEntity] = []
+    for number in numbers:
+        entities.append(VulgraadSensor(coordinator, number))
+        entities.append(VulgraadLastEmptiedSensor(coordinator, number))
+    async_add_entities(entities)
 
 
-class VulgraadSensor(CoordinatorEntity[VulgraadCoordinator], SensorEntity):
-    """How full one container is, in percent."""
+class VulgraadEntity(CoordinatorEntity[VulgraadCoordinator]):
+    """One container, named after its fraction and grouped under its cluster."""
 
     _attr_has_entity_name = True
-    _attr_native_unit_of_measurement = PERCENTAGE
-    _attr_state_class = SensorStateClass.MEASUREMENT
-    _attr_icon = "mdi:trash-can"
 
     def __init__(self, coordinator: VulgraadCoordinator, number: str) -> None:
         super().__init__(coordinator)
         self._number = number
-        self._attr_unique_id = f"{DOMAIN}_{number}"
         self._apply_identity()
 
     @property
@@ -67,7 +72,10 @@ class VulgraadSensor(CoordinatorEntity[VulgraadCoordinator], SensorEntity):
         fraction = FRACTION_NAMES.get(
             (container.fraction or "").upper() if container else "", "Container"
         )
-        self._attr_name = f"{fraction} {self._number}"
+        self._attr_translation_placeholders = {
+            "fraction": fraction,
+            "number": self._number,
+        }
 
         cluster_id = container.cluster_id if container else None
         self._attr_device_info = DeviceInfo(
@@ -78,6 +86,26 @@ class VulgraadSensor(CoordinatorEntity[VulgraadCoordinator], SensorEntity):
             model="Ondergrondse container",
             entry_type=None,
         )
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        # The first poll is what tells us the cluster and fraction, so identity
+        # is refreshed rather than fixed at construction.
+        self._apply_identity()
+        super()._handle_coordinator_update()
+
+
+class VulgraadSensor(VulgraadEntity, SensorEntity):
+    """How full one container is, in percent."""
+
+    _attr_translation_key = "vulgraad"
+    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_icon = "mdi:trash-can"
+
+    def __init__(self, coordinator: VulgraadCoordinator, number: str) -> None:
+        super().__init__(coordinator, number)
+        self._attr_unique_id = f"{DOMAIN}_{number}"
 
     @property
     def available(self) -> bool:
@@ -123,9 +151,63 @@ class VulgraadSensor(CoordinatorEntity[VulgraadCoordinator], SensorEntity):
             ATTR_STATUS: status,
         }
 
+
+class VulgraadLastEmptiedSensor(VulgraadEntity, RestoreSensor):
+    """When the fill level was last seen to fall, which is when it was emptied.
+
+    The portal has no emptying date, so this is inferred: a drop of at least
+    EMPTIED_MIN_DROP points between two polls counts as an emptying, stamped
+    with the time of the poll that saw it. It is therefore accurate to within
+    one poll interval.
+
+    Unknown until the first emptying is seen. The level it compares against is
+    kept across restarts, so an emptying during downtime is still caught.
+    """
+
+    _attr_translation_key = "last_emptied"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_icon = "mdi:delete-empty"
+
+    def __init__(self, coordinator: VulgraadCoordinator, number: str) -> None:
+        super().__init__(coordinator, number)
+        self._attr_unique_id = f"{DOMAIN}_{number}_last_emptied"
+        self._attr_native_value: datetime | None = None
+        self._last_vulgraad: int | None = None
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        if (data := await self.async_get_last_sensor_data()) is not None:
+            if isinstance(data.native_value, datetime):
+                self._attr_native_value = data.native_value
+        if (state := await self.async_get_last_state()) is not None:
+            previous = state.attributes.get(ATTR_LAST_SEEN_LEVEL)
+            if isinstance(previous, int):
+                self._last_vulgraad = previous
+        # The coordinator polled before this entity existed, so compare that
+        # poll against the restored level now rather than waiting an interval.
+        self._observe()
+        self.async_write_ha_state()
+
     @callback
     def _handle_coordinator_update(self) -> None:
-        # The first poll is what tells us the cluster and fraction, so identity
-        # is refreshed rather than fixed at construction.
-        self._apply_identity()
+        self._observe()
         super()._handle_coordinator_update()
+
+    @callback
+    def _observe(self) -> None:
+        container = self._container
+        level = container.vulgraad if container and container.has_sensor else None
+        if level is None:
+            # A failed poll or a missing reading must not reset the baseline,
+            # or an emptying across the gap would go unnoticed.
+            return
+        if (
+            self._last_vulgraad is not None
+            and self._last_vulgraad - level >= EMPTIED_MIN_DROP
+        ):
+            self._attr_native_value = dt_util.utcnow()
+        self._last_vulgraad = level
+
+    @property
+    def extra_state_attributes(self) -> dict[str, object]:
+        return {ATTR_LAST_SEEN_LEVEL: self._last_vulgraad}

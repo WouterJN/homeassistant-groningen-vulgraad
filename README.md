@@ -63,13 +63,14 @@ only double the traffic.
 
 Instead go to **Settings**, then **Devices and Services**, find **Groningen
 container vulgraad**, and choose **Configure**. The container list is a
-multiple choice field: add the ones you want and submit. A sensor appears for
+multiple choice field: add the ones you want and submit. Two sensors appear for
 each.
 
 ## What you get
 
-One sensor per container, reported as a percentage with
-`state_class: measurement`, grouped into a device per cluster. Each sensor
+Two sensors per container, grouped into a device per cluster.
+
+The fill level is reported as a percentage with `state_class: measurement`. It
 carries `warn_threshold`, `alarm_threshold`, `fraction` and `status` as
 attributes, where status is `ok`, `warn` or `alarm`, so cards and automations
 never hardcode 60 and 80.
@@ -77,6 +78,13 @@ never hardcode 60 and 80.
 A container whose fill sensor is absent, or a poll that fails, reports
 `unavailable`. It never reports 0, which would read as "just emptied" and fire
 exactly the automation you did not want.
+
+The second sensor, *last emptied*, is a timestamp. The portal does not say when
+a container was emptied, so this is inferred: when the fill level falls by at
+least 20 points between two polls, the time of that poll is recorded. It is
+therefore accurate to within one poll interval, and it reads `unknown` until
+the first emptying has been seen. The last level it saw is kept across
+restarts, so an emptying while Home Assistant was down is still caught.
 
 One fetch serves every container you configure. The portal returns the whole
 municipality or nothing, so watching ten containers costs what watching one

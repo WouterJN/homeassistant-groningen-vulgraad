@@ -60,7 +60,10 @@
   "entity": {
     "sensor": {
       "vulgraad": {
-        "name": "Vulgraad"
+        "name": "{fraction} {number}"
+      },
+      "last_emptied": {
+        "name": "{fraction} {number} laatst geleegd"
       }
     }
   }

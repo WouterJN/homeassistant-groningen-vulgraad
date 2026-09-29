@@ -41,6 +41,12 @@ ATTR_FRACTION: Final = "fraction"
 ATTR_WARN: Final = "warn_threshold"
 ATTR_ALARM: Final = "alarm_threshold"
 ATTR_STATUS: Final = "status"
+ATTR_LAST_SEEN_LEVEL: Final = "last_seen_level"
+
+# The portal does not say when a container was emptied, so an emptying is
+# inferred from the fill level falling between two polls. The sensors jitter by
+# a few points from one reading to the next, which must not count.
+EMPTIED_MIN_DROP: Final = 20
 
 # Raised as a repair issue when the operationIds go stale after a redeploy.
 # Last known good operation identifiers, remembered on the config entry so a
