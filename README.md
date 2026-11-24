@@ -8,8 +8,7 @@
 
 See how full the underground waste containers (*ondergrondse containers*) in
 the municipality of Groningen are: restafval, papier, glas, plastic and
-textiel. The
-municipality only shows the fill levels (*vulgraad*) inside its
+textiel. The municipality only shows the fill levels (*vulgraad*) inside its
 burgerportaal, which has no public API. This integration reads the portal for
 you and turns your containers into ordinary sensors.
 
