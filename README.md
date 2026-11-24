@@ -1,11 +1,13 @@
-<img src="assets/icon.png" alt="" width="96" align="left">
+<p align="center">
+  <img src="assets/icon.png" alt="" width="96">
+</p>
 
-# Groningen container vulgraad
+<h1 align="center">Groningen container vulgraad</h1>
 
-Shows how full the underground waste containers in Groningen are, as Home
-Assistant sensors.
-
-<br clear="left">
+<p align="center">
+  Shows how full the underground waste containers in Groningen are,<br>
+  as Home Assistant sensors.
+</p>
 
 The municipality only shows fill levels inside its burgerportaal, which has no
 public API. This integration reads the portal for you.
