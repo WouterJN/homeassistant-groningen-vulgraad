@@ -26,7 +26,7 @@
   sensors and any cluster device left empty.
 - The container picker shows each container's number, so two containers of the
   same kind in one cluster can be told apart.
-- `country` is set to `NL` in `hacs.json`, as HACS requires for integrations
+- `country` is set to `NL` in `hacs.json`, as the Marketplace catalog requires for integrations
   that only work in some countries.
 
 ### Changed
