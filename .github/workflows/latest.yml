@@ -1,0 +1,21 @@
+name: Latest Home Assistant
+
+# The regular tests run against the Home Assistant release pinned in
+# requirements-dev.txt. This runs them once a week against the newest one, so
+# a breaking change shows up here before users report it. When it fails, fix
+# what broke and raise the pin.
+on:
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: pip install --upgrade pytest-homeassistant-custom-component pytest-cov
+      - run: pytest tests -q
