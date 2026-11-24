@@ -38,12 +38,18 @@ PAGE = (
 
 def test_finds_each_operation_by_what_it_does():
     page = PageDefinition("some.page.xml", PAGE)
-    assert page.microflow_datasource("Burger_Applicatie.link") == "SEEDSEEDSEEDSEEDSEEDaa"
+    assert (
+        page.microflow_datasource("Burger_Applicatie.link")
+        == "SEEDSEEDSEEDSEEDSEEDaa"
+    )
     assert (
         page.microflow_datasource("Burger_Applicatie.Inzamelplek")
         == "RETRIEVERETRIEVEREaa"
     )
-    assert page.entity_path_datasource("Burger_Applicatie.Group") == "GROUPSDSGROUPSDSaaaa"
+    assert (
+        page.entity_path_datasource("Burger_Applicatie.Group")
+        == "GROUPSDSGROUPSDSaaaa"
+    )
     assert page.microflow_call("Group") == "PICKTILEPICKTILEaaaa"
     assert page.call_with_arguments({"link", "helper"}) == "ADDRESSADDRESSADaaaa"
 
@@ -59,7 +65,10 @@ def test_missing_operations_return_none_rather_than_a_wrong_one():
 def test_entity_path_matches_the_end_of_the_path_only():
     """Group_ResultSet_Groups must not be mistaken for the Group entity."""
     page = PageDefinition("some.page.xml", PAGE)
-    assert page.entity_path_datasource("Burger_Applicatie.Group_ResultSet_Groups") is None
+    assert (
+        page.entity_path_datasource("Burger_Applicatie.Group_ResultSet_Groups")
+        is None
+    )
 
 
 async def test_stale_ids_trigger_one_rediscovery():

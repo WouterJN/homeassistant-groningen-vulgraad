@@ -12,6 +12,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          # Home Assistant itself needs 3.14, and so does its test plugin.
+          python-version: "3.14"
       - run: pip install -r requirements-dev.txt
-      - run: pytest tests -q
+      - run: ruff check .
+      - run: pytest tests -q --cov=custom_components/groningen_vulgraad --cov-report=term-missing

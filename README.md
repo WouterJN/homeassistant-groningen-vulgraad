@@ -16,6 +16,8 @@ in the integration's own setup screen.
 
 ## Installation
 
+You need Home Assistant 2024.11 or newer.
+
 ### With HACS (recommended)
 
 [HACS](https://hacs.xyz) is the Home Assistant Community Store. It installs
@@ -64,7 +66,7 @@ only double the traffic.
 Instead go to **Settings**, then **Devices and Services**, find **Groningen
 container vulgraad**, and choose **Configure**. The container list is a
 multiple choice field: add the ones you want and submit. Two sensors appear for
-each.
+each. A container you take out of the list is removed again, with its sensors.
 
 ## What you get
 
@@ -122,6 +124,19 @@ of things in the portal's data model, which outlive any rebuild.
 The repair notice in Home Assistant now only appears if that recovery also
 fails, which would mean the portal changed more deeply than a rebuild.
 
+## Reporting a problem
+
+Open an issue on the
+[project page](https://github.com/WouterJN/homeassistant-groningen-vulgraad/issues)
+and attach the diagnostics. To get them, go to **Settings**, then **Devices and
+Services**, open **Groningen container vulgraad**, and choose **Download
+diagnostics** from the menu with three dots.
+
+The file says whether the portal answered, what it answered for your
+containers, and which internal identifiers worked. Your address is left out,
+and so are the numbers, clusters and coordinates of the containers you follow,
+because those would show roughly where you live.
+
 ## Icon
 
 The artwork lives in `assets/`. It draws one container as it actually looks on
@@ -133,17 +148,26 @@ fills from the bottom.
 `logo.svg` is the source, and `python assets/render_logo.py` regenerates the
 PNG sizes from the same shapes, so no drawing program is needed.
 
-Home Assistant does not read icons from an integration's own folder. To make
-this one appear on the integration card, the PNG files have to be contributed
-to the Home Assistant brands repository, under
-`custom_integrations/groningen_vulgraad/`.
+Copies of the PNG files ship inside the integration, in
+`custom_components/groningen_vulgraad/brand/`, which is where Home Assistant and
+HACS look for an integration's icon. After changing the artwork, copy
+`icon.png` and `icon@2x.png` there again.
 
 ## Development
 
+The tests need Python 3.14, because Home Assistant does.
+
 ```bash
-python -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
-.venv/bin/python -m pytest tests -q
+python3.14 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 ```
+
+```bash
+.venv/bin/ruff check . && .venv/bin/python -m pytest tests -q
+```
+
+The test dependencies are pinned in `requirements-dev.txt`, so CI keeps
+testing against one known Home Assistant release. Raise that pin on purpose
+and run the tests again. Changes are listed in [CHANGELOG.md](CHANGELOG.md).
 
 `custom_components/groningen_vulgraad/api.py` imports nothing from Home
 Assistant, so you can exercise it on its own.
