@@ -16,12 +16,17 @@ public API. This integration reads the portal for you.
 
 Requires Home Assistant 2024.11 or newer.
 
-**With HACS (recommended).** Click the button below, or in HACS open the menu
-with three dots, choose **Custom repositories**, and add this repository's URL
-with type **Integration**. Then download **Groningen container vulgraad** and
-restart Home Assistant.
+**With the Marketplace (recommended).** Click the button below. Or go to
+**Settings → Marketplace**, choose **Add from link**, and enter
+`WouterJN/homeassistant-groningen-vulgraad`. Then open it, select **Install**,
+and restart Home Assistant if it asks you to. Updates appear under
+**Settings → Updates**.
 
-[![Open in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=WouterJN&repository=homeassistant-groningen-vulgraad&category=integration)
+[![Open in the Marketplace](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=WouterJN&repository=homeassistant-groningen-vulgraad&category=integration)
+
+On Home Assistant 2026.10 or older, which has no Marketplace, use
+[HACS](https://hacs.xyz) the same way: **Custom repositories**, type
+**Integration**.
 
 **By hand.** Copy `custom_components/groningen_vulgraad/` into the
 `custom_components/` folder of your configuration and restart. You will have to

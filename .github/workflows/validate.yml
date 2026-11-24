@@ -1,6 +1,6 @@
 name: Validate
 
-# HACS will not accept a repository into its default store unless both of these
+# The Marketplace catalog (hacs/default) will not accept a repository unless these
 # pass without errors, so they run on every push and once a day, to catch
 # breakage introduced by the tools rather than by this repository.
 on:
