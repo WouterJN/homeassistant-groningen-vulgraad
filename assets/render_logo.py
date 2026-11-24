@@ -32,6 +32,7 @@ def u(value: float) -> float:
 
 
 def render() -> Image.Image:
+    """Draw the icon once, at full canvas size."""
     image = Image.new("RGBA", (CANVAS, CANVAS), (0, 0, 0, 0))
     draw = ImageDraw.Draw(image)
     draw.rounded_rectangle([0, 0, CANVAS, CANVAS], radius=u(104), fill=BACKGROUND)

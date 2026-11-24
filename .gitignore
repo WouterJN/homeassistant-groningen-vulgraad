@@ -12,3 +12,5 @@ vulgraad.config.json
 __pycache__/
 .pytest_cache/
 .xas_bulk_ops.json
+.coverage
+.ruff_cache/

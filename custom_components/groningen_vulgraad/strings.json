@@ -31,7 +31,7 @@
       "invalid_huisnummer": "The house number must be digits only.",
       "address_rejected": "The portal says this address is outside the municipality.",
       "cannot_connect": "Could not reach the portal.",
-      "protocol_changed": "The portal has changed and the integration can no longer read it. See the repair notice.",
+      "protocol_changed": "The portal has changed in a way this integration could not follow. Check HACS for an update, and if there is none, please open an issue on the project page.",
       "unknown": "Unexpected error."
     },
     "abort": {

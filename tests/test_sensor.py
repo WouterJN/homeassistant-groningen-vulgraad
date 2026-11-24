@@ -1,7 +1,9 @@
 """Entity behaviour, including the failure modes that matter."""
 
+from datetime import UTC
 from unittest.mock import AsyncMock, patch
 
+from homeassistant.config_entries import ConfigEntryState
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.groningen_vulgraad.api import VulgraadProtocolError
@@ -98,7 +100,7 @@ async def test_unload(hass, containers):
     entry = await setup_entry(hass, containers)
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()
-    assert entry.entry_id not in hass.data.get(DOMAIN, {})
+    assert entry.state is ConfigEntryState.NOT_LOADED
 
 
 async def test_portal_gets_a_private_cookie_jar(hass, containers):
@@ -112,7 +114,7 @@ async def test_portal_gets_a_private_cookie_jar(hass, containers):
 
     shared = async_get_clientsession(hass)
     entry = await setup_entry(hass, containers, numbers=("111",))
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
 
     assert coordinator._session is not shared
     assert coordinator._session.cookie_jar is not shared.cookie_jar
@@ -120,7 +122,7 @@ async def test_portal_gets_a_private_cookie_jar(hass, containers):
 
 async def test_config_flow_fetch_uses_its_own_session(hass):
     """The same isolation, for the flow that runs before an entry exists."""
-    from unittest.mock import AsyncMock, patch
+    from unittest.mock import patch
 
     from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
@@ -153,7 +155,7 @@ EMPTIED = "sensor.1234_teststraat_restafval_111_last_emptied"
 
 async def poll(hass, entry, containers):
     """One more coordinator poll, returning the given payload."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     with patch(PATCH_CLIENT, AsyncMock(return_value=containers)):
         await coordinator.async_refresh()
         await hass.async_block_till_done()
@@ -195,14 +197,14 @@ async def test_a_missing_reading_keeps_the_baseline(hass, containers, freezer):
 
 
 async def test_last_emptied_survives_a_restart(hass):
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from homeassistant.core import State
     from pytest_homeassistant_custom_component.common import (
         mock_restore_cache_with_extra_data,
     )
 
-    emptied = datetime(2026, 9, 20, 7, 0, tzinfo=timezone.utc)
+    emptied = datetime(2026, 9, 20, 7, 0, tzinfo=UTC)
     mock_restore_cache_with_extra_data(
         hass,
         [

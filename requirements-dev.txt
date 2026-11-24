@@ -1,2 +1,6 @@
-aiohttp
-pytest-homeassistant-custom-component
+# Pinned so CI keeps testing against a known Home Assistant release. This one
+# brings Home Assistant 2026.10.4 and needs Python 3.14. Bump it on purpose,
+# then run the tests.
+pytest-homeassistant-custom-component==0.13.375
+pytest-cov==7.1.0
+ruff==0.17.6

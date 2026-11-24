@@ -11,7 +11,6 @@ the real client walks, in eight requests.
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 from dataclasses import dataclass
@@ -67,6 +66,10 @@ LOCATIE = "Burger_Applicatie.Locatie"
 
 REQUEST_TIMEOUT = aiohttp.ClientTimeout(total=90)
 
+# The status Mendix answers with when it refuses an operation, which is what
+# stale operation identifiers look like.
+MENDIX_REFUSED = 560
+
 
 class VulgraadError(Exception):
     """Base error."""
@@ -101,14 +104,6 @@ class Container:
     latitude: float | None
     longitude: float | None
 
-    @property
-    def label(self) -> str:
-        """Human-readable one-liner for the config-flow picker."""
-        parts = [self.cluster_name or f"cluster {self.cluster_id}", self.number]
-        if self.fraction:
-            parts.append(self.fraction.title())
-        return " · ".join(parts)
-
 
 class BurgerportaalClient:
     """Just enough of a Mendix client to walk one flow.
@@ -125,6 +120,12 @@ class BurgerportaalClient:
         ops: dict[str, str] | None = None,
         allow_discovery: bool = True,
     ) -> None:
+        """Prepare one walk of the portal flow over `session`.
+
+        `ops` are the operation identifiers to try first, normally the ones
+        that worked last time. With `allow_discovery` off, a refusal is raised
+        instead of rediscovering them.
+        """
         self._session = session
         self._ops = dict(ops) if ops else dict(DEFAULT_OPS)
         self._allow_discovery = allow_discovery
@@ -158,7 +159,12 @@ class BurgerportaalClient:
             )
             try:
                 containers = await self._walk(postcode, huisnummer, discover=True)
-            except VulgraadError as discovery_err:
+            except (VulgraadConnectionError, VulgraadAddressRejected):
+                # Not evidence that the portal changed: an outage or a refusal
+                # that began between the two walks. Report it as what it is,
+                # so no repair notice is raised for it.
+                raise
+            except VulgraadProtocolError as discovery_err:
                 raise VulgraadProtocolError(
                     f"{err}; rediscovery also failed: {discovery_err}"
                 ) from discovery_err
@@ -167,6 +173,21 @@ class BurgerportaalClient:
             return containers
 
     async def _walk(
+        self, postcode: str, huisnummer: str, discover: bool
+    ) -> list[Container]:
+        """Walk the flow once, optionally learning each identifier on the way.
+
+        A reply that lacks a field the walk depends on is reported as a
+        protocol change, so it takes the same recovery path as a refusal.
+        """
+        try:
+            return await self._walk_steps(postcode, huisnummer, discover)
+        except (KeyError, IndexError, TypeError, AttributeError) as err:
+            raise VulgraadProtocolError(
+                f"unexpected reply from the portal: {err!r}"
+            ) from err
+
+    async def _walk_steps(
         self, postcode: str, huisnummer: str, discover: bool
     ) -> list[Container]:
         self._store.clear()
@@ -267,7 +288,10 @@ class BurgerportaalClient:
             message = _first_message(response)
             _LOGGER.debug("address rejected: %s", message)
             raise VulgraadAddressRejected(message or "address rejected")
-        return parameters["$ResultSet_Groups"], path
+        groups = parameters.get("$ResultSet_Groups")
+        if not groups:
+            raise VulgraadProtocolError("the address step passed no tile list")
+        return groups, path
 
     async def _async_choose_tile(self, groups_guid: str) -> tuple[str | None, str]:
         await self._async_call(
@@ -329,12 +353,16 @@ class BurgerportaalClient:
         url = f"{PAGE_URL}{path}"
         try:
             async with self._session.get(url, timeout=REQUEST_TIMEOUT) as response:
+                if response.status >= 500:
+                    raise VulgraadConnectionError(
+                        f"page {path} returned HTTP {response.status}"
+                    )
                 if response.status != 200:
                     raise VulgraadProtocolError(
                         f"page {path} returned HTTP {response.status}"
                     )
                 return PageDefinition(path, await response.text())
-        except asyncio.TimeoutError as err:
+        except TimeoutError as err:
             raise VulgraadConnectionError(f"timed out fetching {path}") from err
         except aiohttp.ClientError as err:
             raise VulgraadConnectionError(str(err)) from err
@@ -348,13 +376,16 @@ class BurgerportaalClient:
             ) as response:
                 if response.status != 200:
                     text = await response.text()
+                    message = f"HTTP {response.status}: {text[:200]}"
                     # 560 is the Mendix "operation refused" catch-all; from a
                     # previously working chain it means the ids went stale.
-                    raise VulgraadProtocolError(
-                        f"HTTP {response.status}: {text[:200]}"
-                    )
+                    # Any other 5xx is the portal or its host being down, and
+                    # rediscovering would only double the traffic.
+                    if response.status >= 500 and response.status != MENDIX_REFUSED:
+                        raise VulgraadConnectionError(message)
+                    raise VulgraadProtocolError(message)
                 return await response.json(content_type=None)
-        except asyncio.TimeoutError as err:
+        except TimeoutError as err:
             raise VulgraadConnectionError("timed out talking to the portal") from err
         except aiohttp.ClientError as err:
             raise VulgraadConnectionError(str(err)) from err
@@ -428,6 +459,7 @@ def _opened_form(response: dict[str, Any]) -> tuple[str | None, dict[str, Any]]:
 
 
 def _first_message(response: dict[str, Any]) -> str | None:
+    """The text of the first message the portal asked the client to show."""
     for instruction in response.get("instructions", []):
         if instruction.get("type") == "text_message":
             args = instruction.get("args") or {}
@@ -438,6 +470,7 @@ def _first_message(response: dict[str, Any]) -> str | None:
 
 
 def _to_container(obj: dict[str, Any]) -> Container:
+    """One portal Locatie object as a Container."""
     attributes = {k: (v or {}).get("value") for k, v in obj["attributes"].items()}
 
     def as_int(key: str) -> int | None:

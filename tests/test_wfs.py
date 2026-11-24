@@ -4,7 +4,10 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from custom_components.groningen_vulgraad.api import VulgraadProtocolError
+from custom_components.groningen_vulgraad.api import (
+    VulgraadConnectionError,
+    VulgraadProtocolError,
+)
 from custom_components.groningen_vulgraad.config_flow import _container_options
 from custom_components.groningen_vulgraad.wfs import async_get_catalogue
 
@@ -68,6 +71,9 @@ async def test_catalogue_rejects_empty_and_errors():
     with pytest.raises(VulgraadProtocolError):
         await async_get_catalogue(FakeSession({"features": []}))
     with pytest.raises(VulgraadProtocolError):
+        await async_get_catalogue(FakeSession({}, status=404))
+    # a server error is the service being down, not a change in what it serves
+    with pytest.raises(VulgraadConnectionError):
         await async_get_catalogue(FakeSession({}, status=503))
 
 

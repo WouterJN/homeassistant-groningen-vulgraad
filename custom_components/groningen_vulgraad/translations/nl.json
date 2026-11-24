@@ -31,7 +31,7 @@
       "invalid_huisnummer": "Het huisnummer mag alleen cijfers bevatten.",
       "address_rejected": "Het portaal meldt dat dit adres buiten de gemeente valt.",
       "cannot_connect": "Kan het portaal niet bereiken.",
-      "protocol_changed": "Het portaal is gewijzigd en kan niet meer worden uitgelezen. Zie de reparatiemelding.",
+      "protocol_changed": "Het portaal is zo gewijzigd dat deze integratie het niet meer kan volgen. Kijk in HACS of er een update is, en open anders een issue op de projectpagina.",
       "unknown": "Onverwachte fout."
     },
     "abort": {

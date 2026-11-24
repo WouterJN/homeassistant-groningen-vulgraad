@@ -48,7 +48,6 @@ ATTR_LAST_SEEN_LEVEL: Final = "last_seen_level"
 # a few points from one reading to the next, which must not count.
 EMPTIED_MIN_DROP: Final = 20
 
-# Raised as a repair issue when the operationIds go stale after a redeploy.
 # Last known good operation identifiers, remembered on the config entry so a
 # redeploy costs one rediscovery rather than one per restart.
 CONF_OPERATION_IDS: Final = "operation_ids"
