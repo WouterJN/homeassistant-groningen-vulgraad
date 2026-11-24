@@ -18,8 +18,8 @@ when the portal cannot be reached, never as the primary list.
 
 from __future__ import annotations
 
-import asyncio
 import logging
+from typing import Any
 
 import aiohttp
 
@@ -50,12 +50,16 @@ async def async_get_catalogue(session: aiohttp.ClientSession) -> list[Container]
         async with session.get(
             WFS_URL, params=WFS_PARAMS, timeout=REQUEST_TIMEOUT
         ) as response:
+            if response.status >= 500:
+                raise VulgraadConnectionError(
+                    f"WFS returned HTTP {response.status}"
+                )
             if response.status != 200:
                 raise VulgraadProtocolError(
                     f"WFS returned HTTP {response.status}"
                 )
             payload = await response.json(content_type=None)
-    except asyncio.TimeoutError as err:
+    except TimeoutError as err:
         raise VulgraadConnectionError("timed out talking to the WFS") from err
     except aiohttp.ClientError as err:
         raise VulgraadConnectionError(str(err)) from err
@@ -85,13 +89,15 @@ async def async_get_catalogue(session: aiohttp.ClientSession) -> list[Container]
     return list(containers.values())
 
 
-def _text(value) -> str | None:
+def _text(value: Any) -> str | None:
+    """A property as text, with empty values as None."""
     if value in (None, ""):
         return None
     return str(value)
 
 
-def _number(value) -> float | None:
+def _number(value: Any) -> float | None:
+    """A property as a float, with empty or malformed values as None."""
     if value in (None, ""):
         return None
     try:

@@ -12,7 +12,7 @@ from homeassistant.config_entries import (
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.aiohttp_client import (
     async_create_clientsession,
     async_get_clientsession,
@@ -38,7 +38,6 @@ from .api import (
     VulgraadConnectionError,
     VulgraadProtocolError,
 )
-from .wfs import async_get_catalogue
 from .const import (
     CONF_CONTAINERS,
     CONF_HUISNUMMER,
@@ -52,6 +51,7 @@ from .const import (
     MIN_SCAN_INTERVAL_HOURS,
     POSTCODE_RE,
 )
+from .wfs import async_get_catalogue
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -68,6 +68,7 @@ ADDRESS_SCHEMA = vol.Schema(
 
 
 def _interval_selector() -> NumberSelector:
+    """Whole hours, from the friendly minimum to once a day."""
     return NumberSelector(
         NumberSelectorConfig(
             min=MIN_SCAN_INTERVAL_HOURS,
@@ -131,7 +132,10 @@ def _container_options(
         fraction = FRACTION_NAMES.get(
             (container.fraction or "").upper(), container.fraction or "?"
         )
-        label = f"{container.cluster_name or container.cluster_id} · {fraction}"
+        # The number is what tells two containers of one kind in the same
+        # cluster apart, and it is what the sensor names carry.
+        cluster = container.cluster_name or container.cluster_id
+        label = f"{cluster} · {fraction} {container.number}"
         metres, _ = sort_key(container)
         if metres != float("inf"):
             label = f"{label} · {metres / 1000:.1f} km"
@@ -139,7 +143,8 @@ def _container_options(
     return options
 
 
-async def _async_fetch(hass, postcode: str, huisnummer: str) -> list[Container]:
+async def _async_fetch(
+    hass: HomeAssistant, postcode: str, huisnummer: str) -> list[Container]:
     """Walk the portal on a cookie jar of our own.
 
     Not the shared session: a flow can run while a coordinator is polling, and
@@ -162,6 +167,7 @@ class VulgraadConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     def __init__(self) -> None:
+        """Start with nothing; the address step fills these in."""
         self._postcode: str = ""
         self._huisnummer: str = ""
         self._containers: list[Container] = []
@@ -257,6 +263,7 @@ class VulgraadConfigFlow(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(entry: ConfigEntry) -> OptionsFlow:
+        """Containers and interval can be changed after setup."""
         return VulgraadOptionsFlow(entry)
 
 
@@ -264,12 +271,14 @@ class VulgraadOptionsFlow(OptionsFlow):
     """Change the container selection or the poll interval."""
 
     def __init__(self, entry: ConfigEntry) -> None:
+        """Remember the entry whose options are being changed."""
         # Stored privately: assigning self.config_entry is deprecated.
         self._entry = entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
+        """Offer the containers again, with the current ones selected."""
         if user_input is not None:
             return self.async_create_entry(
                 data={

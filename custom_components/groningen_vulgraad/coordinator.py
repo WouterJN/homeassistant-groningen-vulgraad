@@ -30,6 +30,8 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+type VulgraadConfigEntry = ConfigEntry[VulgraadCoordinator]
+
 
 class VulgraadCoordinator(DataUpdateCoordinator[dict[str, Container]]):
     """Fetch the whole municipality once per interval, keyed by container number.
@@ -38,17 +40,25 @@ class VulgraadCoordinator(DataUpdateCoordinator[dict[str, Container]]):
     container -- so watching ten costs exactly what watching one costs.
     """
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
+    config_entry: VulgraadConfigEntry
+
+    def __init__(self, hass: HomeAssistant, entry: VulgraadConfigEntry) -> None:
+        """Poll at the interval the user chose, on a cookie jar of our own."""
         hours = entry.options.get(
             CONF_SCAN_INTERVAL_HOURS, DEFAULT_SCAN_INTERVAL_HOURS
         )
         super().__init__(
             hass,
             _LOGGER,
+            config_entry=entry,
             name=DOMAIN,
             update_interval=timedelta(hours=hours),
         )
         self.entry = entry
+        # The options this coordinator was built for. Writing rediscovered
+        # identifiers into the entry's data also fires its update listener,
+        # and only a change to these is worth a reload.
+        self.options = dict(entry.options)
         # A private cookie jar, not Home Assistant's shared client session.
         #
         # The portal is session based: it sets a session cookie and issues a
@@ -105,6 +115,7 @@ class VulgraadCoordinator(DataUpdateCoordinator[dict[str, Container]]):
         )
 
     def _async_raise_stale_issue(self) -> None:
+        """Tell the user the portal changed beyond what rediscovery handles."""
         ir.async_create_issue(
             self.hass,
             DOMAIN,
@@ -115,4 +126,5 @@ class VulgraadCoordinator(DataUpdateCoordinator[dict[str, Container]]):
         )
 
     def _async_clear_stale_issue(self) -> None:
+        """Withdraw the notice once a poll succeeds again."""
         ir.async_delete_issue(self.hass, DOMAIN, ISSUE_STALE_OPS)

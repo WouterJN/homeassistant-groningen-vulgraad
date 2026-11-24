@@ -31,7 +31,7 @@
       "invalid_huisnummer": "The house number must be digits only.",
       "address_rejected": "The portal says this address is outside the municipality.",
       "cannot_connect": "Could not reach the portal.",
-      "protocol_changed": "The portal has changed and the integration can no longer read it. See the repair notice.",
+      "protocol_changed": "The portal has changed in a way this integration could not follow. Check Settings > Updates for a new version of this integration, and if there is none, please open an issue on the project page.",
       "unknown": "Unexpected error."
     },
     "abort": {
@@ -54,7 +54,7 @@
   "issues": {
     "stale_operation_ids": {
       "title": "Groningen portal has been redeployed",
-      "description": "The portal changed in a way this integration could not follow. It normally repairs itself when the portal is rebuilt, by reading the portal's own page definitions, but that did not work this time. Check HACS for an update, and if there is none, please open an issue on the project page."
+      "description": "The portal changed in a way this integration could not follow. It normally repairs itself when the portal is rebuilt, by reading the portal's own page definitions, but that did not work this time. Check Settings > Updates for a new version of this integration, and if there is none, please open an issue on the project page."
     }
   },
   "entity": {

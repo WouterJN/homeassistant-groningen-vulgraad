@@ -10,7 +10,6 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import PERCENTAGE
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -18,6 +17,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
+from . import unique_ids
 from .api import Container
 from .const import (
     ATTR_ALARM,
@@ -33,16 +33,16 @@ from .const import (
     EMPTIED_MIN_DROP,
     FRACTION_NAMES,
 )
-from .coordinator import VulgraadCoordinator
+from .coordinator import VulgraadConfigEntry, VulgraadCoordinator
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: VulgraadConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up two sensors per configured container."""
-    coordinator: VulgraadCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     numbers: list[str] = entry.options.get(CONF_CONTAINERS, [])
     entities: list[SensorEntity] = []
     for number in numbers:
@@ -57,12 +57,14 @@ class VulgraadEntity(CoordinatorEntity[VulgraadCoordinator]):
     _attr_has_entity_name = True
 
     def __init__(self, coordinator: VulgraadCoordinator, number: str) -> None:
+        """Follow container `number` in the coordinator's data."""
         super().__init__(coordinator)
         self._number = number
         self._apply_identity()
 
     @property
     def _container(self) -> Container | None:
+        """This container in the latest poll, if the poll had it."""
         return (self.coordinator.data or {}).get(self._number)
 
     @callback
@@ -84,11 +86,11 @@ class VulgraadEntity(CoordinatorEntity[VulgraadCoordinator]):
             or f"Cluster {cluster_id or self._number}",
             manufacturer="Gemeente Groningen",
             model="Ondergrondse container",
-            entry_type=None,
         )
 
     @callback
     def _handle_coordinator_update(self) -> None:
+        """Refresh the name and device as well as the state."""
         # The first poll is what tells us the cluster and fraction, so identity
         # is refreshed rather than fixed at construction.
         self._apply_identity()
@@ -104,8 +106,9 @@ class VulgraadSensor(VulgraadEntity, SensorEntity):
     _attr_icon = "mdi:trash-can"
 
     def __init__(self, coordinator: VulgraadCoordinator, number: str) -> None:
+        """Create the fill level sensor of container `number`."""
         super().__init__(coordinator, number)
-        self._attr_unique_id = f"{DOMAIN}_{number}"
+        self._attr_unique_id = unique_ids(number)[0]
 
     @property
     def available(self) -> bool:
@@ -125,11 +128,13 @@ class VulgraadSensor(VulgraadEntity, SensorEntity):
 
     @property
     def native_value(self) -> int | None:
+        """The fill level in percent."""
         container = self._container
         return container.vulgraad if container else None
 
     @property
     def extra_state_attributes(self) -> dict[str, object]:
+        """Thresholds and a status, so cards never hardcode 60 and 80."""
         container = self._container
         if container is None:
             return {}
@@ -169,12 +174,14 @@ class VulgraadLastEmptiedSensor(VulgraadEntity, RestoreSensor):
     _attr_icon = "mdi:delete-empty"
 
     def __init__(self, coordinator: VulgraadCoordinator, number: str) -> None:
+        """Create the last emptied sensor of container `number`."""
         super().__init__(coordinator, number)
-        self._attr_unique_id = f"{DOMAIN}_{number}_last_emptied"
+        self._attr_unique_id = unique_ids(number)[1]
         self._attr_native_value: datetime | None = None
         self._last_vulgraad: int | None = None
 
     async def async_added_to_hass(self) -> None:
+        """Restore the last emptying and the level it was measured against."""
         await super().async_added_to_hass()
         if (data := await self.async_get_last_sensor_data()) is not None:
             if isinstance(data.native_value, datetime):
@@ -190,11 +197,13 @@ class VulgraadLastEmptiedSensor(VulgraadEntity, RestoreSensor):
 
     @callback
     def _handle_coordinator_update(self) -> None:
+        """Look for an emptying before writing the new state."""
         self._observe()
         super()._handle_coordinator_update()
 
     @callback
     def _observe(self) -> None:
+        """Record an emptying if the level fell far enough since last time."""
         container = self._container
         level = container.vulgraad if container and container.has_sensor else None
         if level is None:
@@ -210,4 +219,5 @@ class VulgraadLastEmptiedSensor(VulgraadEntity, RestoreSensor):
 
     @property
     def extra_state_attributes(self) -> dict[str, object]:
+        """The baseline, kept so a restart does not lose it."""
         return {ATTR_LAST_SEEN_LEVEL: self._last_vulgraad}

@@ -46,6 +46,7 @@ class PageDefinition:
     """One page definition, queried by what an operation does."""
 
     def __init__(self, path: str, text: str) -> None:
+        """Wrap the definition served at `path`."""
         self.path = path
         self._text = text
 

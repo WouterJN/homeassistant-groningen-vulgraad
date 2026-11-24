@@ -31,7 +31,7 @@
       "invalid_huisnummer": "Het huisnummer mag alleen cijfers bevatten.",
       "address_rejected": "Het portaal meldt dat dit adres buiten de gemeente valt.",
       "cannot_connect": "Kan het portaal niet bereiken.",
-      "protocol_changed": "Het portaal is gewijzigd en kan niet meer worden uitgelezen. Zie de reparatiemelding.",
+      "protocol_changed": "Het portaal is zo gewijzigd dat deze integratie het niet meer kan volgen. Kijk bij Instellingen > Updates of er een nieuwe versie van deze integratie is, en open anders een issue op de projectpagina.",
       "unknown": "Onverwachte fout."
     },
     "abort": {
@@ -54,7 +54,7 @@
   "issues": {
     "stale_operation_ids": {
       "title": "Portaal Groningen is opnieuw uitgerold",
-      "description": "Het portaal is zo gewijzigd dat de integratie niet mee kon. Normaal herstelt de integratie zichzelf na een verbouwing van het portaal, door de paginadefinities van het portaal zelf te lezen, maar dat lukte deze keer niet. Kijk in HACS of er een update is, en open anders een issue op de projectpagina."
+      "description": "Het portaal is zo gewijzigd dat de integratie niet mee kon. Normaal herstelt de integratie zichzelf na een verbouwing van het portaal, door de paginadefinities van het portaal zelf te lezen, maar dat lukte deze keer niet. Kijk bij Instellingen > Updates of er een nieuwe versie van deze integratie is, en open anders een issue op de projectpagina."
     }
   },
   "entity": {

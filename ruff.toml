@@ -1,0 +1,21 @@
+target-version = "py313"
+
+[lint]
+select = ["E", "F", "W", "I", "B", "UP", "D"]
+ignore = [
+    # The two docstring layouts pydocstyle offers are mutually exclusive; this
+    # keeps the summary on the first line, the way Home Assistant core does.
+    "D203",
+    "D213",
+    # Docstrings here say what a function returns ("Every container in the
+    # municipality, with fill levels."), which reads better than an imperative.
+    "D401",
+    "D404",
+]
+
+[lint.per-file-ignores]
+# Test names say what they check; a docstring is added only where they cannot.
+"tests/**" = ["D"]
+
+[lint.isort]
+known-first-party = ["custom_components"]
